@@ -1,6 +1,7 @@
 package com.example.lab_b.ui
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -22,6 +24,7 @@ import com.example.lab_b.ui.theme.Lab_bTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate llamado")
         setContent {
             Lab_bTheme {
                 Surface(
@@ -41,22 +44,41 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.fetchPokemonList()
-    }
+    Log.d("MainScreen", "Estado actual: ${uiState::class.simpleName}")
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(
+            text = "Laboratorio 6 - MVVM",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
         when (val currentState = uiState) {
-            is UiState.Loading -> CircularProgressIndicator()
-            is UiState.Success -> PokemonList(currentState.data)
-            is UiState.Error -> Text(
-                text = currentState.message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            is UiState.Loading -> {
+                Log.d("MainScreen", "Mostrando estado de carga")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Cargando pokémon...")
+                }
+            }
+            is UiState.Success -> {
+                Log.d("MainScreen", "Mostrando ${currentState.data.size} pokémon")
+                PokemonList(currentState.data)
+            }
+            is UiState.Error -> {
+                Log.e("MainScreen", "Mostrando error: ${currentState.message}")
+                ErrorMessage(
+                    message = currentState.message,
+                    onRetry = { viewModel.fetchPokemonList() }
+                )
+            }
         }
     }
 }
@@ -65,7 +87,6 @@ fun MainScreen(viewModel: MainViewModel) {
 fun PokemonList(pokemonList: List<Pokemon>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(pokemonList) { pokemon ->
@@ -79,6 +100,25 @@ fun PokemonList(pokemonList: List<Pokemon>) {
                     modifier = Modifier.padding(16.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun ErrorMessage(message: String, onRetry: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Reintentar")
         }
     }
 }
